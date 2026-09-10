@@ -6,6 +6,7 @@ use App\Http\Middleware\PreventBrowserHistoryCache;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\FrameGuard;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(FrameGuard::class);
+
         $middleware->alias([
             'active.session' => EnsureActiveSession::class,
             'user.manager' => EnsureUserManager::class,

@@ -6,6 +6,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+test('same-origin frames are allowed for embedded application modules', function () {
+    $this->get(route('public.portal'))
+        ->assertOk()
+        ->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+});
+
 function publicPortalProject(User $user): \App\Models\Project
 {
     $folder = $user->projectFolders()->create([
