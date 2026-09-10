@@ -35,11 +35,8 @@
             .portal-header { position: relative; z-index: 10; border-bottom: 1px solid var(--line); background: var(--header); box-shadow: 0 12px 34px rgba(0,0,0,.28); }
             .header-top { display: flex; width: min(1500px, calc(100% - 44px)); min-height: 88px; margin: 0 auto; align-items: center; justify-content: space-between; gap: 24px; }
             .brand-cluster { display: flex; min-width: 0; align-items: center; gap: 20px; }
-            .brand { display: flex; min-width: 0; align-items: center; gap: 13px; }
-            .brand__crest { width: 82px; height: 72px; flex: 0 0 auto; background-image: url('{{ asset('images/municipal-coatepeque-header.png') }}'); background-repeat: no-repeat; background-position: -222px -4px; background-size: 1850px 147px; }
-            .brand__wordmark { display: flex; min-width: 0; flex-direction: column; color: #fff; font-family: Georgia, "Times New Roman", serif; text-transform: uppercase; white-space: nowrap; }
-            .brand__wordmark strong { font-size: 1.12rem; letter-spacing: -.025em; }
-            .brand__wordmark small { margin-top: 3px; font-size: .58rem; font-weight: 700; }
+            .brand { display: flex; min-width: 0; align-items: center; }
+            .brand__logo { display: block; width: auto; height: 80px; border-radius: 5px; object-fit: contain; }
             .public-badge { padding: 7px 10px; border: 1px solid rgba(213,178,109,.34); border-radius: 999px; color: var(--gold); background: rgba(213,178,109,.08); font-size: .66rem; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
 
             .header-actions { display: flex; align-items: center; gap: 14px; }
@@ -60,7 +57,6 @@
             .module-panel iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--page); }
 
             html.light-mode { color-scheme: light; --page: #eaf1f5; --header: #fff; --nav: #f7fbfd; --line: rgba(31,57,79,.16); --text: #172033; --muted: #66717e; }
-            html.light-mode .brand__wordmark { color: #101923; }
             html.light-mode .nav-shell { border-top-color: rgba(31,57,79,.1); box-shadow: 0 8px 22px rgba(31,57,79,.08); }
             html.light-mode .nav-link.is-active { color: #fff; }
             html.light-mode .theme-toggle__sun { display: none; }
@@ -68,9 +64,7 @@
 
             @media (max-width: 720px) {
                 .header-top { width: calc(100% - 24px); min-height: 78px; }
-                .brand__crest { width: 62px; height: 59px; background-position: -176px -3px; background-size: 1465px 116px; }
-                .brand__wordmark strong { font-size: .82rem; }
-                .brand__wordmark small { font-size: .46rem; }
+                .brand__logo { height: 69px; }
                 .public-badge { display: none; }
                 .login-link { padding: 0 10px; font-size: .65rem; }
                 .nav-list { width: 100%; }
@@ -84,11 +78,11 @@
             <div class="header-top">
                 <div class="brand-cluster">
                     <div class="brand" aria-label="Gobierno Municipal de Coatepeque, Quetzaltenango">
-                        <span class="brand__crest" aria-hidden="true"></span>
-                        <span class="brand__wordmark">
-                            <strong>Gobierno Municipal</strong>
-                            <small>Coatepeque, Quetzaltenango</small>
-                        </span>
+                        <img
+                            class="brand__logo"
+                            src="{{ asset('images/municipal-coatepeque-login-logo.png') }}"
+                            alt="Gobierno Municipal de Coatepeque, Administración 2024-2028"
+                        >
                     </div>
                     <span class="public-badge">Consulta pública</span>
                 </div>
