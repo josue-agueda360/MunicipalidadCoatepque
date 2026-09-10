@@ -41,7 +41,7 @@ test('the enter button opens a public portal without home or user management', f
         ->assertSee('Ubicación de proyectos')
         ->assertSee('Monitoreo')
         ->assertSee('Control financiero')
-        ->assertSee(asset('images/municipal-coatepeque-login-logo.png'), false)
+        ->assertSee(asset('images/municipal-coatepeque-header.png'), false)
         ->assertDontSee('data-module-target="home"', false)
         ->assertDontSee('data-module-target="users"', false)
         ->assertSee(route('public.project-locations', ['embed' => 1]), false)

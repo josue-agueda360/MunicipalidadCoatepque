@@ -35,8 +35,11 @@
             .portal-header { position: relative; z-index: 10; border-bottom: 1px solid var(--line); background: var(--header); box-shadow: 0 12px 34px rgba(0,0,0,.28); }
             .header-top { display: flex; width: min(1500px, calc(100% - 44px)); min-height: 88px; margin: 0 auto; align-items: center; justify-content: space-between; gap: 24px; }
             .brand-cluster { display: flex; min-width: 0; align-items: center; gap: 20px; }
-            .brand { display: flex; min-width: 0; align-items: center; }
-            .brand__logo { display: block; width: auto; height: 80px; border-radius: 5px; object-fit: contain; }
+            .brand { position: relative; display: block; width: 310px; height: 74px; overflow: hidden; text-decoration: none; }
+            .brand__art { position: absolute; top: 0; left: 0; width: 310px; height: 80px; background-image: url('{{ asset('images/municipal-coatepeque-header.png') }}'); background-repeat: no-repeat; background-position: -229px -7px; background-size: 1917px 152px; transform: scale(.92); transform-origin: top left; }
+            .brand__wordmark { position: absolute; z-index: 2; top: 8px; right: 0; bottom: 8px; left: 88px; display: flex; padding-left: 7px; flex-direction: column; justify-content: center; color: #fff; background: #0c0e0e; font-family: Georgia, "Times New Roman", serif; line-height: 1; text-transform: uppercase; white-space: nowrap; }
+            .brand__wordmark strong { font-size: 1.05rem; font-weight: 800; letter-spacing: -.035em; }
+            .brand__wordmark small { margin-top: 3px; font-size: .56rem; font-weight: 700; letter-spacing: .015em; }
             .public-badge { padding: 7px 10px; border: 1px solid rgba(213,178,109,.34); border-radius: 999px; color: var(--gold); background: rgba(213,178,109,.08); font-size: .66rem; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
 
             .header-actions { display: flex; align-items: center; gap: 14px; }
@@ -57,6 +60,8 @@
             .module-panel iframe { display: block; width: 100%; height: 100%; border: 0; background: var(--page); }
 
             html.light-mode { color-scheme: light; --page: #eaf1f5; --header: #fff; --nav: #f7fbfd; --line: rgba(31,57,79,.16); --text: #172033; --muted: #66717e; }
+            html.light-mode .brand__art { background-image: url('{{ asset('images/municipal-coatepeque-brand-light.png') }}'); background-position: 0 0; background-size: 310px 80px; }
+            html.light-mode .brand__wordmark { color: #101820; background: #fff; }
             html.light-mode .nav-shell { border-top-color: rgba(31,57,79,.1); box-shadow: 0 8px 22px rgba(31,57,79,.08); }
             html.light-mode .nav-link.is-active { color: #fff; }
             html.light-mode .theme-toggle__sun { display: none; }
@@ -64,7 +69,11 @@
 
             @media (max-width: 720px) {
                 .header-top { width: calc(100% - 24px); min-height: 78px; }
-                .brand__logo { height: 69px; }
+                .brand { width: 235px; height: 72px; }
+                .brand__art { transform: scale(.9); transform-origin: top left; }
+                .brand__wordmark { left: 73px; }
+                .brand__wordmark strong { font-size: .76rem; }
+                .brand__wordmark small { font-size: .41rem; }
                 .public-badge { display: none; }
                 .login-link { padding: 0 10px; font-size: .65rem; }
                 .nav-list { width: 100%; }
@@ -78,11 +87,11 @@
             <div class="header-top">
                 <div class="brand-cluster">
                     <div class="brand" aria-label="Gobierno Municipal de Coatepeque, Quetzaltenango">
-                        <img
-                            class="brand__logo"
-                            src="{{ asset('images/municipal-coatepeque-login-logo.png') }}"
-                            alt="Gobierno Municipal de Coatepeque, Administración 2024-2028"
-                        >
+                        <span class="brand__art" aria-hidden="true"></span>
+                        <span class="brand__wordmark" aria-hidden="true">
+                            <strong>Gobierno Municipal</strong>
+                            <small>Coatepeque, Quetzaltenango</small>
+                        </span>
                     </div>
                     <span class="public-badge">Consulta pública</span>
                 </div>
