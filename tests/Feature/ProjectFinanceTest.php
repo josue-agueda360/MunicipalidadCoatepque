@@ -75,6 +75,18 @@ test('the financial module lists the shared municipal projects', function () {
         ->assertSee("event.data?.type === 'theme-changed'", false);
 });
 
+test('the public finance view omits the editable financial summary panel', function () {
+    $user = User::factory()->create();
+    projectForFinanceTests($user);
+
+    $this->get(route('public.project-finance.index'))
+        ->assertOk()
+        ->assertDontSee('Resumen financiero')
+        ->assertDontSee('Presupuesto y avance físico reportado.')
+        ->assertDontSee('id="financial-profile-form"', false)
+        ->assertSee('Presupuesto asignado');
+});
+
 test('multiple project images can be uploaded to the idrive album folder', function () {
     Storage::fake('local');
     config()->set('filesystems.project_files_disk', 'local');

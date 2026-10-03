@@ -427,11 +427,12 @@
                             <div class="metric-card"><span>Ejecución financiera</span><strong id="metric-progress"></strong></div>
                         </div>
 
+                        @unless($readOnly)
                         <div class="content-card">
-                            <div class="card-head"><div><h2>Resumen financiero</h2><p class="section-copy">{{ $readOnly ? 'Presupuesto y avance físico reportado.' : 'Actualiza el presupuesto y el avance físico reportado.' }}</p></div></div>
+                            <div class="card-head"><div><h2>Resumen financiero</h2><p class="section-copy">Actualiza el presupuesto y el avance físico reportado.</p></div></div>
                             <div class="progress-track"><span class="progress-bar" id="financial-progress-bar"></span></div>
                             <div class="progress-labels"><span>0%</span><strong id="financial-progress-label">0%</strong><span>100%</span></div>
-                            <form id="financial-profile-form" @if($readOnly) hidden @endif>
+                            <form id="financial-profile-form">
                                 <div class="form-grid" style="margin-top:16px">
                                     <div class="field"><label for="allocated-budget">Presupuesto asignado (Q)</label><input id="allocated-budget" name="allocated_budget" type="number" min="0" max="999999999999.99" step="0.01" required></div>
                                     <div class="field"><label for="physical-progress">Avance físico (%)</label><input id="physical-progress" name="physical_progress" type="number" min="0" max="100" step="0.01" required></div>
@@ -439,6 +440,7 @@
                                 <div class="form-actions"><button class="primary-button" type="submit">Guardar resumen</button></div>
                             </form>
                         </div>
+                        @endunless
                     </section>
 
                     <section class="content-card" id="funding-section">
@@ -815,11 +817,16 @@
                     status.textContent = statusLabels[project.financial_status];
                     status.className = `finance-status finance-status--${project.financial_status}`;
                     const progressBar = $('#financial-progress-bar');
-                    progressBar.style.width = `${Math.min(100, Number(project.financial_progress))}%`;
-                    progressBar.className = `progress-bar${project.financial_status === 'near_limit' ? ' is-near' : ''}${project.financial_status === 'exceeded' ? ' is-exceeded' : ''}`;
-                    $('#financial-progress-label').textContent = percent(project.financial_progress);
-                    $('#allocated-budget').value = Number(project.allocated_budget).toFixed(2);
-                    $('#physical-progress').value = Number(project.physical_progress).toFixed(2);
+                    if (progressBar) {
+                        progressBar.style.width = `${Math.min(100, Number(project.financial_progress))}%`;
+                        progressBar.className = `progress-bar${project.financial_status === 'near_limit' ? ' is-near' : ''}${project.financial_status === 'exceeded' ? ' is-exceeded' : ''}`;
+                    }
+                    const progressLabel = $('#financial-progress-label');
+                    if (progressLabel) progressLabel.textContent = percent(project.financial_progress);
+                    const allocatedBudget = $('#allocated-budget');
+                    if (allocatedBudget) allocatedBudget.value = Number(project.allocated_budget).toFixed(2);
+                    const physicalProgress = $('#physical-progress');
+                    if (physicalProgress) physicalProgress.value = Number(project.physical_progress).toFixed(2);
                     renderFunding(project);
                     renderRequiredDocuments(project);
                     renderGallery(project);
@@ -838,7 +845,7 @@
                     return result;
                 };
 
-                $('#financial-profile-form').addEventListener('submit', async (event) => {
+                $('#financial-profile-form')?.addEventListener('submit', async (event) => {
                     event.preventDefault();
                     if (readOnly) return;
                     const project = selectedProject();
