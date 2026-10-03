@@ -416,7 +416,9 @@
                         <button type="button" data-scroll-to="funding-section">Fuentes</button>
                         <button type="button" data-scroll-to="required-documents-section">Documentos</button>
                         <button type="button" data-scroll-to="project-gallery-section">Álbum</button>
+                        @unless($readOnly)
                         <button type="button" data-scroll-to="analysis-section">Análisis</button>
+                        @endunless
                     </nav>
 
                     <section id="financial-summary">
@@ -511,6 +513,7 @@
                         <div class="gallery-grid" id="project-gallery"></div>
                     </section>
 
+                    @unless($readOnly)
                     <section class="content-card" id="analysis-section">
                         <div class="card-head"><div><h2>Análisis financiero</h2><p class="section-copy">Comparación de presupuesto, ejecución y avance por período.</p></div></div>
                         <div class="analysis-grid">
@@ -529,6 +532,7 @@
                             </div>
                         </div>
                     </section>
+                    @endunless
                 </article>
             </section>
         </main>
@@ -836,7 +840,7 @@
                     renderFunding(project);
                     renderRequiredDocuments(project);
                     renderGallery(project);
-                    renderAnalysis(project);
+                    if (!readOnly) renderAnalysis(project);
                 };
 
                 const jsonRequest = async (url, method, payload) => {
