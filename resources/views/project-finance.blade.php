@@ -422,9 +422,11 @@
                     <section id="financial-summary">
                         <div class="summary-grid">
                             <div class="metric-card"><span>Presupuesto asignado</span><strong id="metric-budget"></strong></div>
+                            @unless($readOnly)
                             <div class="metric-card"><span>Monto ejecutado</span><strong id="metric-executed"></strong></div>
                             <div class="metric-card metric-card--balance" id="balance-card"><span>Saldo disponible</span><strong id="metric-balance"></strong></div>
                             <div class="metric-card"><span>Ejecución financiera</span><strong id="metric-progress"></strong></div>
+                            @endunless
                         </div>
 
                         @unless($readOnly)
@@ -808,10 +810,14 @@
                     $('#finance-project-name').textContent = `${project.snip ? `${project.snip}-` : ''}${project.name}`;
                     $('#finance-project-place').textContent = project.place || 'Sin ubicación registrada';
                     $('#metric-budget').textContent = money.format(project.allocated_budget);
-                    $('#metric-executed').textContent = money.format(project.executed_amount);
-                    $('#metric-balance').textContent = money.format(project.available_balance);
-                    $('#metric-progress').textContent = percent(project.financial_progress);
-                    $('#balance-card').classList.toggle('metric-card--negative', project.available_balance < 0);
+                    const executedMetric = $('#metric-executed');
+                    if (executedMetric) executedMetric.textContent = money.format(project.executed_amount);
+                    const balanceMetric = $('#metric-balance');
+                    if (balanceMetric) balanceMetric.textContent = money.format(project.available_balance);
+                    const progressMetric = $('#metric-progress');
+                    if (progressMetric) progressMetric.textContent = percent(project.financial_progress);
+                    const balanceCard = $('#balance-card');
+                    if (balanceCard) balanceCard.classList.toggle('metric-card--negative', project.available_balance < 0);
                     const statusLabels = { normal: 'Estado financiero: normal', near_limit: 'Cercano al límite', exceeded: 'Presupuesto excedido' };
                     const status = $('#finance-status');
                     status.textContent = statusLabels[project.financial_status];

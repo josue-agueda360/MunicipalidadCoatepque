@@ -84,7 +84,10 @@ test('the public finance view omits the editable financial summary panel', funct
         ->assertDontSee('Resumen financiero')
         ->assertDontSee('Presupuesto y avance físico reportado.')
         ->assertDontSee('id="financial-profile-form"', false)
-        ->assertSee('Presupuesto asignado');
+        ->assertSee('Presupuesto asignado')
+        ->assertDontSee('<span>Monto ejecutado</span>', false)
+        ->assertDontSee('<span>Saldo disponible</span>', false)
+        ->assertDontSee('<span>Ejecución financiera</span>', false);
 });
 
 test('multiple project images can be uploaded to the idrive album folder', function () {
