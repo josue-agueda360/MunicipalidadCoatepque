@@ -302,6 +302,19 @@
             .is-read-only .required-document-card { min-height: 0; }
             .is-read-only .required-document-current { margin-top: 0; padding: 0; border: 0; background: transparent; }
 
+            .gallery-upload-form { display: grid; margin: 16px 0 20px; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+            .gallery-upload-form input[type="file"] { width: 100%; padding: 10px; border: 1px dashed rgba(42,165,211,.38); border-radius: 9px; color: var(--muted); background: #060a0b; font-size: .68rem; }
+            .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+            .gallery-card { position: relative; min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--card-2); }
+            .gallery-photo { display: block; overflow: hidden; aspect-ratio: 4 / 3; background: #050707; }
+            .gallery-photo img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 180ms ease; }
+            .gallery-photo:hover img { transform: scale(1.035); }
+            .gallery-meta { display: grid; min-width: 0; padding: 10px 11px; padding-right: 72px; gap: 3px; }
+            .gallery-meta strong { overflow: hidden; color: var(--text); font-size: .69rem; text-overflow: ellipsis; white-space: nowrap; }
+            .gallery-meta small { color: var(--muted); font-size: .58rem; }
+            .gallery-delete { position: absolute; right: 9px; bottom: 9px; }
+            .gallery-empty { grid-column: 1 / -1; margin: 0; padding: 24px; border: 1px dashed var(--line); border-radius: 11px; color: var(--muted); text-align: center; font-size: .72rem; }
+
             .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 11px; }
             table { width: 100%; border-collapse: collapse; min-width: 920px; }
             th, td { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; font-size: .67rem; vertical-align: top; }
@@ -344,7 +357,7 @@
             html.light-mode body { background: radial-gradient(circle at 85% 0, rgba(42,165,211,.14), transparent 32rem), var(--page); }
             html.light-mode .finance-shell { background: rgba(255,255,255,.96); box-shadow: 0 24px 60px rgba(31,57,79,.14); }
             html.light-mode .project-picker { background: linear-gradient(180deg, #fff, #f4f7f9); }
-            html.light-mode .project-search, html.light-mode .field input, html.light-mode .field select, html.light-mode .field textarea, html.light-mode .required-document-form input[type="file"] { color: var(--text); background: #f8fafb; }
+            html.light-mode .project-search, html.light-mode .field input, html.light-mode .field select, html.light-mode .field textarea, html.light-mode .required-document-form input[type="file"], html.light-mode .gallery-upload-form input[type="file"] { color: var(--text); background: #f8fafb; }
             html.light-mode .section-nav { background: rgba(255,255,255,.94); }
             html.light-mode .section-nav button:hover { color: var(--text); }
             html.light-mode .progress-track, html.light-mode .mini-track { background: rgba(31,57,79,.1); }
@@ -365,6 +378,7 @@
                 .finance-content { height: auto; min-height: 700px; padding: 16px; overflow: visible; }
                 .section-nav { top: 0; margin-inline: -16px; padding-inline: 16px; }
                 .form-grid, .funding-form { grid-template-columns: 1fr; }
+                .gallery-upload-form { grid-template-columns: 1fr; }
                 .field--wide { grid-column: auto; }
                 .finance-head { display: block; }
                 .finance-status { display: inline-block; margin-top: 10px; }
@@ -401,6 +415,7 @@
                         <button type="button" data-scroll-to="financial-summary">Resumen</button>
                         <button type="button" data-scroll-to="funding-section">Fuentes</button>
                         <button type="button" data-scroll-to="required-documents-section">Documentos</button>
+                        <button type="button" data-scroll-to="project-gallery-section">Álbum</button>
                         <button type="button" data-scroll-to="analysis-section">Análisis</button>
                     </nav>
 
@@ -475,6 +490,21 @@
                                 <div class="required-document-current" id="budget-current" hidden></div>
                             </article>
                         </div>
+                    </section>
+
+                    <section class="content-card" id="project-gallery-section">
+                        <div class="card-head"><div><h2>Álbum del proyecto</h2><p class="section-copy">{{ $readOnly ? 'Galería fotográfica publicada para este proyecto.' : 'Añade fotografías del proyecto. Las imágenes se guardan en IDrive e2 y se muestran como una galería.' }}</p></div></div>
+                        @unless($readOnly)
+                        <form class="gallery-upload-form" id="gallery-upload-form" enctype="multipart/form-data">
+                            <div class="field">
+                                <label for="gallery-images">Imágenes del proyecto</label>
+                                <input id="gallery-images" name="images[]" type="file" accept=".jpg,.jpeg,.png,.webp" multiple required>
+                                <span class="field-note">Hasta 10 imágenes por carga · máximo 10 MB cada una · JPG, PNG o WEBP.</span>
+                            </div>
+                            <button class="primary-button" type="submit">Añadir al álbum</button>
+                        </form>
+                        @endunless
+                        <div class="gallery-grid" id="project-gallery"></div>
                     </section>
 
                     <section class="content-card" id="analysis-section">
@@ -678,6 +708,53 @@
                     }
                 };
 
+                const renderGallery = (project) => {
+                    const gallery = $('#project-gallery');
+                    gallery.replaceChildren();
+
+                    if (!project.gallery_images.length) {
+                        gallery.append(createText('p', 'Aún no hay imágenes publicadas para este proyecto.', 'gallery-empty'));
+                        return;
+                    }
+
+                    project.gallery_images.forEach((imageData) => {
+                        const card = document.createElement('article');
+                        card.className = 'gallery-card';
+
+                        const link = document.createElement('a');
+                        link.className = 'gallery-photo';
+                        link.href = imageData.preview_url;
+                        link.target = '_blank';
+                        link.rel = 'noopener';
+                        link.title = `Abrir ${imageData.name}`;
+
+                        const image = document.createElement('img');
+                        image.src = imageData.preview_url;
+                        image.alt = imageData.name;
+                        image.loading = 'lazy';
+                        link.append(image);
+
+                        const meta = document.createElement('div');
+                        meta.className = 'gallery-meta';
+                        meta.append(
+                            createText('strong', imageData.name),
+                            createText('small', `${fileSize(imageData.size)}${imageData.uploaded_at ? ` · ${imageData.uploaded_at}` : ''}`),
+                        );
+
+                        card.append(link, meta);
+                        if (!readOnly) {
+                            const remove = createText('button', 'Eliminar', 'icon-button gallery-delete');
+                            remove.type = 'button';
+                            remove.addEventListener('click', () => openDelete(
+                                imageData.delete_url,
+                                `Se eliminará la imagen “${imageData.name}”.`,
+                            ));
+                            card.append(remove);
+                        }
+                        gallery.append(card);
+                    });
+                };
+
                 const renderAnalysis = (project) => {
                     const cappedFinancial = Math.min(100, Number(project.financial_progress));
                     const cappedPhysical = Math.min(100, Number(project.physical_progress));
@@ -745,6 +822,7 @@
                     $('#physical-progress').value = Number(project.physical_progress).toFixed(2);
                     renderFunding(project);
                     renderRequiredDocuments(project);
+                    renderGallery(project);
                     renderAnalysis(project);
                 };
 
@@ -821,6 +899,32 @@
                         } catch (error) { showToast(error.message, true); }
                         finally { button.disabled = false; button.textContent = originalLabel; }
                     });
+                });
+
+                $('#gallery-upload-form')?.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    if (readOnly) return;
+                    const project = selectedProject();
+                    if (!project) return;
+                    const submittedForm = event.currentTarget;
+                    const button = submittedForm.querySelector('[type="submit"]');
+                    const originalLabel = button.textContent;
+                    button.disabled = true;
+                    button.textContent = 'Subiendo…';
+                    try {
+                        const response = await fetch(project.gallery_upload_url, {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                            body: new FormData(submittedForm),
+                        });
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(firstError(result, 'No se pudieron guardar las imágenes.'));
+                        submittedForm.reset();
+                        replaceProject(result.project);
+                        showToast(result.message);
+                    } catch (error) { showToast(error.message, true); }
+                    finally { button.disabled = false; button.textContent = originalLabel; }
                 });
 
                 $('#contract-waiver')?.addEventListener('change', async (event) => {

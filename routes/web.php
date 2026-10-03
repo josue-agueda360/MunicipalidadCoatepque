@@ -53,6 +53,12 @@ Route::middleware('no.store')->group(function (): void {
         [ProjectFinanceController::class, 'downloadRequiredDocument'],
     )->middleware('throttle:30,1')
         ->name('public.project-finance.required-documents.download');
+
+    Route::get(
+        '/portal-publico/proyectos/{project}/album/{projectGalleryImage}',
+        [ProjectFinanceController::class, 'previewGalleryImage'],
+    )->middleware('throttle:60,1')
+        ->name('public.project-finance.gallery.preview');
 });
 
 Route::post(
@@ -144,6 +150,21 @@ Route::middleware(['auth', 'active.session', 'no.store'])->group(function (): vo
         '/proyectos/{project}/finanzas/documentos/{projectFinancialRequiredDocument}',
         [ProjectFinanceController::class, 'destroyRequiredDocument'],
     )->middleware('throttle:10,1')->name('project-finance.required-documents.destroy');
+
+    Route::post(
+        '/proyectos/{project}/album',
+        [ProjectFinanceController::class, 'storeGalleryImages'],
+    )->middleware('throttle:10,1')->name('project-finance.gallery.store');
+
+    Route::get(
+        '/proyectos/{project}/album/{projectGalleryImage}',
+        [ProjectFinanceController::class, 'previewGalleryImage'],
+    )->middleware('throttle:60,1')->name('project-finance.gallery.preview');
+
+    Route::delete(
+        '/proyectos/{project}/album/{projectGalleryImage}',
+        [ProjectFinanceController::class, 'destroyGalleryImage'],
+    )->middleware('throttle:10,1')->name('project-finance.gallery.destroy');
 
     Route::post(
         '/proyectos/{project}/finanzas/movimientos',

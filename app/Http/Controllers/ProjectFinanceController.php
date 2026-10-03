@@ -7,12 +7,14 @@ use App\Models\ProjectFinancialDocument;
 use App\Models\ProjectFinancialMovement;
 use App\Models\ProjectFinancialRequiredDocument;
 use App\Models\ProjectFundingSource;
+use App\Models\ProjectGalleryImage;
 use App\Support\DeletionCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -55,6 +57,7 @@ class ProjectFinanceController extends Controller
                 'financialProfile',
                 'fundingSources' => fn ($query) => $query->latest('id'),
                 'financialRequiredDocuments',
+                'galleryImages',
                 'financialMovements' => fn ($query) => $query
                     ->with(['recordedBy:id,name', 'document'])
                     ->orderByDesc('occurred_on')
@@ -322,6 +325,110 @@ class ProjectFinanceController extends Controller
         );
     }
 
+    public function storeGalleryImages(Request $request, Project $project): JsonResponse
+    {
+        $this->ensureProjectOwnership($request, $project);
+
+        if (! preg_match('/^\d{1,6}$/', (string) $project->snip)) {
+            throw ValidationException::withMessages([
+                'images' => 'El proyecto necesita un código SNIP válido para guardar sus imágenes en IDrive e2.',
+            ]);
+        }
+
+        $data = $request->validate([
+            'images' => ['required', 'array', 'min:1', 'max:10'],
+            'images.*' => ['required', 'image', 'max:10240', 'mimes:jpg,jpeg,png,webp'],
+        ], [
+            'images.required' => 'Selecciona al menos una imagen.',
+            'images.array' => 'Las imágenes seleccionadas no son válidas.',
+            'images.min' => 'Selecciona al menos una imagen.',
+            'images.max' => 'Puedes subir hasta 10 imágenes a la vez.',
+            'images.*.image' => 'Cada archivo debe ser una imagen válida.',
+            'images.*.max' => 'Cada imagen puede pesar como máximo 10 MB.',
+            'images.*.mimes' => 'Solo se permiten imágenes JPG, PNG o WEBP.',
+        ]);
+
+        $disk = (string) config('filesystems.project_files_disk', 'local');
+        $prefix = trim((string) config('filesystems.project_files_prefix', 'project-files'), '/');
+        $directory = "{$prefix}/{$project->snip}/album";
+        $storedPaths = [];
+
+        try {
+            DB::transaction(function () use ($request, $project, $data, $disk, $directory, &$storedPaths): void {
+                foreach ($data['images'] as $uploadedFile) {
+                    $originalName = $this->originalFileName($uploadedFile);
+                    $extension = strtolower((string) $uploadedFile->extension());
+                    $storageName = Str::uuid().($extension !== '' ? ".{$extension}" : '');
+                    $path = $uploadedFile->storeAs($directory, $storageName, $disk);
+
+                    abort_if($path === false, 500, 'No se pudo guardar una de las imágenes del proyecto.');
+                    $storedPaths[] = $path;
+
+                    $project->galleryImages()->create([
+                        'uploaded_by_user_id' => $request->user()->id,
+                        'original_name' => $originalName,
+                        'path' => $path,
+                        'disk' => $disk,
+                        'mime_type' => (string) $uploadedFile->getMimeType(),
+                        'size' => $uploadedFile->getSize(),
+                    ]);
+                }
+            });
+        } catch (Throwable $exception) {
+            foreach ($storedPaths as $path) {
+                Storage::disk($disk)->delete($path);
+            }
+
+            throw $exception;
+        }
+
+        return $this->projectResponse(
+            $project,
+            count($storedPaths) === 1
+                ? 'Imagen agregada al álbum correctamente.'
+                : count($storedPaths).' imágenes agregadas al álbum correctamente.',
+            201,
+        );
+    }
+
+    public function previewGalleryImage(
+        Request $request,
+        Project $project,
+        ProjectGalleryImage $projectGalleryImage,
+    ): StreamedResponse {
+        $this->ensureGalleryImageOwnership($request, $project, $projectGalleryImage);
+        abort_unless(
+            Storage::disk($projectGalleryImage->disk)->exists($projectGalleryImage->path),
+            404,
+            'La imagen ya no está disponible.',
+        );
+
+        return Storage::disk($projectGalleryImage->disk)->response(
+            $projectGalleryImage->path,
+            $projectGalleryImage->original_name,
+            [
+                'Content-Type' => $projectGalleryImage->mime_type,
+                'X-Content-Type-Options' => 'nosniff',
+            ],
+            'inline',
+        );
+    }
+
+    public function destroyGalleryImage(
+        Request $request,
+        Project $project,
+        ProjectGalleryImage $projectGalleryImage,
+    ): JsonResponse {
+        $this->ensureGalleryImageOwnership($request, $project, $projectGalleryImage);
+        DeletionCode::validate($request);
+        $projectGalleryImage->delete();
+
+        return $this->projectResponse(
+            $project,
+            'Imagen eliminada del álbum correctamente.',
+        );
+    }
+
     public function storeMovement(Request $request, Project $project): JsonResponse
     {
         $this->ensureProjectOwnership($request, $project);
@@ -513,6 +620,7 @@ class ProjectFinanceController extends Controller
             'financialProfile',
             'fundingSources' => fn ($query) => $query->latest('id'),
             'financialRequiredDocuments',
+            'galleryImages',
             'financialMovements' => fn ($query) => $query
                 ->with(['recordedBy:id,name', 'document'])
                 ->orderByDesc('occurred_on')
@@ -609,6 +717,24 @@ class ProjectFinanceController extends Controller
                 'contract' => route('project-finance.required-documents.store', [$project, 'contract']),
                 'budget' => route('project-finance.required-documents.store', [$project, 'budget']),
             ],
+            'gallery_images' => $project->galleryImages->map(fn (ProjectGalleryImage $image): array => [
+                'id' => $image->id,
+                'name' => $image->original_name,
+                'size' => $image->size,
+                'uploaded_at' => $image->created_at?->format('d/m/Y'),
+                'preview_url' => route(
+                    $readOnly
+                        ? 'public.project-finance.gallery.preview'
+                        : 'project-finance.gallery.preview',
+                    [$project, $image],
+                ),
+                'delete_url' => $readOnly
+                    ? null
+                    : route('project-finance.gallery.destroy', [$project, $image]),
+            ])->values(),
+            'gallery_upload_url' => $readOnly
+                ? null
+                : route('project-finance.gallery.store', $project),
             'contract_waiver_url' => route('project-finance.contract-waiver.update', $project),
             'profile_url' => route('project-finance.profile.update', $project),
             'funding_url' => route('project-finance.funding-sources.store', $project),
@@ -639,6 +765,15 @@ class ProjectFinanceController extends Controller
     ): void {
         $this->ensureProjectOwnership($request, $project);
         abort_unless($document->project_id === $project->id, 404);
+    }
+
+    private function ensureGalleryImageOwnership(
+        Request $request,
+        Project $project,
+        ProjectGalleryImage $image,
+    ): void {
+        $this->ensureProjectOwnership($request, $project);
+        abort_unless($image->project_id === $project->id, 404);
     }
 
     /** @return array<string, mixed> */

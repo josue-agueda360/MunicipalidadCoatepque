@@ -4,6 +4,7 @@ use App\Models\Project;
 use App\Models\ProjectFinancialDocument;
 use App\Models\ProjectFinancialMovement;
 use App\Models\ProjectFinancialRequiredDocument;
+use App\Models\ProjectGalleryImage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -63,6 +64,8 @@ test('the financial module lists the shared municipal projects', function () {
         ->assertSee('Presupuesto asignado')
         ->assertSee('Fuentes de financiamiento')
         ->assertSee('Documentos financieros')
+        ->assertSee('Álbum del proyecto')
+        ->assertSee('id="gallery-upload-form"', false)
         ->assertSee('No tengo contrato')
         ->assertSee('Este documento es obligatorio y no puede omitirse.')
         ->assertDontSee('id="movement-form"', false)
@@ -70,6 +73,93 @@ test('the financial module lists the shared municipal projects', function () {
         ->assertSee('const submittedForm = event.currentTarget;', false)
         ->assertSee('submittedForm.reset();', false)
         ->assertSee("event.data?.type === 'theme-changed'", false);
+});
+
+test('multiple project images can be uploaded to the idrive album folder', function () {
+    Storage::fake('local');
+    config()->set('filesystems.project_files_disk', 'local');
+    config()->set('filesystems.project_files_prefix', 'ArchivosMunicipalidad');
+    $user = User::factory()->create();
+    $project = projectForFinanceTests($user);
+    $tinyPng = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZrV8AAAAASUVORK5CYII=');
+
+    $this->actingAs($user)
+        ->withHeader('Accept', 'application/json')
+        ->post(route('project-finance.gallery.store', $project), [
+            'images' => [
+                UploadedFile::fake()->createWithContent('Inicio del proyecto.png', $tinyPng),
+                UploadedFile::fake()->createWithContent('Avance de obra.png', $tinyPng),
+            ],
+        ])
+        ->assertCreated()
+        ->assertJsonCount(2, 'project.gallery_images')
+        ->assertJsonPath('project.gallery_images.0.name', 'Avance de obra.png')
+        ->assertJsonPath('project.gallery_images.1.name', 'Inicio del proyecto.png');
+
+    expect(ProjectGalleryImage::query()->count())->toBe(2);
+    ProjectGalleryImage::query()->each(function (ProjectGalleryImage $image) use ($project): void {
+        expect($image->path)->toStartWith("ArchivosMunicipalidad/{$project->snip}/album/");
+        Storage::disk('local')->assertExists($image->path);
+    });
+});
+
+test('the project album only accepts supported images', function () {
+    Storage::fake('local');
+    config()->set('filesystems.project_files_disk', 'local');
+    $user = User::factory()->create();
+    $project = projectForFinanceTests($user);
+
+    $this->actingAs($user)
+        ->withHeader('Accept', 'application/json')
+        ->post(route('project-finance.gallery.store', $project), [
+            'images' => [UploadedFile::fake()->create('informe.pdf', 20, 'application/pdf')],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('images.0');
+
+    $this->assertDatabaseCount('project_gallery_images', 0);
+});
+
+test('album images are public shared and deleted with the security code', function () {
+    Storage::fake('local');
+    config()->set('filesystems.project_files_disk', 'local');
+    $owner = User::factory()->create();
+    $other = User::factory()->create();
+    $project = projectForFinanceTests($owner);
+    $image = $project->galleryImages()->create([
+        'uploaded_by_user_id' => $owner->id,
+        'original_name' => 'avance-alcaldia.jpg',
+        'path' => 'album/avance-alcaldia.jpg',
+        'disk' => 'local',
+        'mime_type' => 'image/jpeg',
+        'size' => 24,
+    ]);
+    Storage::disk('local')->put($image->path, 'imagen');
+
+    $this->actingAs($other)
+        ->get(route('project-finance.gallery.preview', [$project, $image]))
+        ->assertOk()
+        ->assertHeader('content-type', 'image/jpeg');
+
+    $this->get(route('public.project-finance.index'))
+        ->assertOk()
+        ->assertSee('Álbum del proyecto')
+        ->assertSee('avance-alcaldia.jpg')
+        ->assertDontSee('id="gallery-upload-form"', false);
+    $this->get(route('public.project-finance.gallery.preview', [$project, $image]))
+        ->assertOk();
+
+    $this->actingAs($other)
+        ->deleteJson(route('project-finance.gallery.destroy', [$project, $image]), ['code' => '00000000'])
+        ->assertUnprocessable();
+    Storage::disk('local')->assertExists($image->path);
+
+    $this->actingAs($other)
+        ->deleteJson(route('project-finance.gallery.destroy', [$project, $image]), ['code' => '59264018'])
+        ->assertOk()
+        ->assertJsonCount(0, 'project.gallery_images');
+    Storage::disk('local')->assertMissing($image->path);
+    $this->assertDatabaseMissing('project_gallery_images', ['id' => $image->id]);
 });
 
 test('contract and budget files are stored in their own idrive project folders', function () {

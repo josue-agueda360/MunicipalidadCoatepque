@@ -59,6 +59,7 @@ class Project extends Model
                     $movement->document?->delete();
                 });
             $project->financialRequiredDocuments()->get()->each->delete();
+            $project->galleryImages()->get()->each->delete();
         });
     }
 
@@ -106,5 +107,11 @@ class Project extends Model
     public function financialRequiredDocuments(): HasMany
     {
         return $this->hasMany(ProjectFinancialRequiredDocument::class);
+    }
+
+    public function galleryImages(): HasMany
+    {
+        return $this->hasMany(ProjectGalleryImage::class)
+            ->latest('id');
     }
 }
