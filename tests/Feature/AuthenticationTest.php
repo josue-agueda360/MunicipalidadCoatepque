@@ -119,6 +119,26 @@ test('a replaced session activity check tells the open page to close', function 
     $this->assertGuest();
 });
 
+test('an inactive session is closed when its lifetime expires', function () {
+    config()->set('session.lifetime', 20);
+
+    $sessionToken = 'sesion-inactiva';
+    $user = User::factory()->create([
+        'active_session_token' => hash('sha256', $sessionToken),
+        'active_session_last_seen_at' => now()->subMinutes(21),
+    ]);
+
+    $this->actingAs($user)
+        ->withSession(['active_session_token' => $sessionToken])
+        ->get(route('home'))
+        ->assertRedirect(route('login', ['sesion' => 'expirada']));
+
+    $this->assertGuest();
+
+    expect($user->refresh()->active_session_token)->toBeNull()
+        ->and($user->active_session_last_seen_at)->toBeNull();
+});
+
 test('the login view includes the whatsapp style session takeover flow', function () {
     $this->get(route('login'))
         ->assertOk()

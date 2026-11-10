@@ -58,6 +58,15 @@ class EnsureActiveSession
         }
 
         if (
+            $user->active_session_last_seen_at !== null
+            && $user->active_session_last_seen_at->lt(
+                now()->subMinutes((int) config('session.lifetime')),
+            )
+        ) {
+            return $this->expiredSessionResponse($request, $sessionToken);
+        }
+
+        if (
             $user->active_session_last_seen_at === null
             || $user->active_session_last_seen_at->lt(now()->subSeconds(30))
         ) {
@@ -67,6 +76,39 @@ class EnsureActiveSession
         }
 
         return $next($request);
+    }
+
+    private function expiredSessionResponse(
+        Request $request,
+        string $sessionToken,
+    ): JsonResponse|RedirectResponse {
+        $request->user()?->newQuery()
+            ->whereKey($request->user()->id)
+            ->where(
+                'active_session_token',
+                hash('sha256', $sessionToken),
+            )
+            ->update([
+                'active_session_token' => null,
+                'active_session_last_seen_at' => null,
+            ]);
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        $message = 'La sesión se cerró por inactividad.';
+        $redirectUrl = route('login', ['sesion' => 'expirada']);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'session_expired' => true,
+                'redirect_url' => $redirectUrl,
+            ], 401);
+        }
+
+        return redirect($redirectUrl);
     }
 
     private function replacedSessionResponse(

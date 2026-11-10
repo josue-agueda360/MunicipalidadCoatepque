@@ -230,7 +230,7 @@ class ProjectFinanceController extends Controller
             $project,
             $documentType === 'contract'
                 ? 'Contrato guardado correctamente.'
-                : 'Presupuesto guardado correctamente.',
+                : 'Fianza guardada correctamente.',
             201,
         );
     }

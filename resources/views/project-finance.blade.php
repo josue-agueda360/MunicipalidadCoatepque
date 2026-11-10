@@ -461,7 +461,7 @@
                     </section>
 
                     <section class="content-card" id="required-documents-section">
-                        <div class="card-head"><div><h2>Documentos financieros</h2><p class="section-copy">{{ $readOnly ? 'Contrato y presupuesto publicados para el proyecto.' : 'Adjunta el contrato y el presupuesto del proyecto. Los archivos se guardan en IDrive e2.' }}</p></div></div>
+                        <div class="card-head"><div><h2>Documentos financieros</h2><p class="section-copy">{{ $readOnly ? 'Contrato y fianza publicados para el proyecto.' : 'Adjunta el contrato y la fianza del proyecto. Los archivos se guardan en IDrive e2.' }}</p></div></div>
                         <div class="required-documents-grid">
                             <article class="required-document-card">
                                 <div class="required-document-head">
@@ -482,15 +482,15 @@
 
                             <article class="required-document-card">
                                 <div class="required-document-head">
-                                    <div><h3>Presupuesto</h3>@unless($readOnly)<p>Este documento es obligatorio y no puede omitirse.</p>@endunless</div>
+                                    <div><h3>Fianza</h3>@unless($readOnly)<p>Este documento es obligatorio y no puede omitirse.</p>@endunless</div>
                                     @unless($readOnly)
                                     <span class="document-status" id="budget-status">Pendiente</span>
                                     @endunless
                                 </div>
                                 @unless($readOnly)
                                 <form class="required-document-form" data-required-document-form="budget" enctype="multipart/form-data">
-                                    <div class="field"><label for="budget-file">Archivo del presupuesto</label><input id="budget-file" name="file" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip" required><span class="field-note">Obligatorio · máximo 50 MB · PDF, Word, Excel, JPG, PNG o ZIP.</span></div>
-                                    <div class="form-actions"><button class="primary-button" type="submit">Subir presupuesto</button></div>
+                                    <div class="field"><label for="budget-file">Archivo de la fianza</label><input id="budget-file" name="file" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip" required><span class="field-note">Obligatorio · máximo 50 MB · PDF, Word, Excel, JPG, PNG o ZIP.</span></div>
+                                    <div class="form-actions"><button class="primary-button" type="submit">Subir fianza</button></div>
                                 </form>
                                 @endunless
                                 <div class="required-document-current" id="budget-current" hidden></div>
@@ -683,7 +683,7 @@
                             current.append(createText('span', fileSize(documentData.size), 'required-document-meta'));
                             const actions = document.createElement('div');
                             actions.className = 'document-actions';
-                            const documentLabel = type === 'contract' ? 'contrato' : 'presupuesto';
+                            const documentLabel = type === 'contract' ? 'contrato' : 'fianza';
                             const preview = createText('a', readOnly ? `Ver ${documentLabel}` : 'Ver');
                             preview.href = documentData.preview_url;
                             preview.target = '_blank';
@@ -702,7 +702,7 @@
                             }
                             current.append(actions);
                         } else if (readOnly) {
-                            current.append(createText('span', type === 'contract' ? 'No tiene contrato.' : 'No tiene presupuesto.', 'required-document-name'));
+                            current.append(createText('span', type === 'contract' ? 'No tiene contrato.' : 'No tiene fianza.', 'required-document-name'));
                         } else if (type === 'contract' && documentData.waived) {
                             current.append(createText('span', 'Marcado como proyecto sin contrato.', 'required-document-name'));
                         }

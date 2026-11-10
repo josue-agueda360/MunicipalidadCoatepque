@@ -212,6 +212,17 @@ test('contract and budget files are stored in their own idrive project folders',
     Storage::disk('local')->assertExists($budget->path);
 });
 
+test('the required budget document is presented to users as a bond', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('project-finance.index'))
+        ->assertOk()
+        ->assertSee('Fianza')
+        ->assertSee('Archivo de la fianza')
+        ->assertSee('Subir fianza');
+});
+
 test('contract can be waived but a saved contract must be deleted first', function () {
     Storage::fake('local');
     config()->set('filesystems.project_files_disk', 'local');
