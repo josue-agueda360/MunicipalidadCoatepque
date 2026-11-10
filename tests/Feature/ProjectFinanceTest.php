@@ -69,7 +69,10 @@ test('the financial module lists the shared municipal projects', function () {
         ->assertSee('No tengo contrato')
         ->assertSee('Este documento es obligatorio y no puede omitirse.')
         ->assertDontSee('id="movement-form"', false)
-        ->assertSee('Avance físico vs. financiero')
+        ->assertDontSee('id="analysis-section"', false)
+        ->assertDontSee('data-scroll-to="analysis-section"', false)
+        ->assertDontSee('<h2>Análisis financiero</h2>', false)
+        ->assertDontSee('Avance físico vs. financiero')
         ->assertSee('const submittedForm = event.currentTarget;', false)
         ->assertSee('submittedForm.reset();', false)
         ->assertSee("event.data?.type === 'theme-changed'", false);

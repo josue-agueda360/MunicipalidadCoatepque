@@ -326,23 +326,6 @@
             .document-actions a { padding: 5px 7px; border: 1px solid rgba(42,165,211,.3); border-radius: 7px; color: #8edaff; text-decoration: none; font-weight: 750; }
             .empty-row { padding: 22px; color: var(--muted); text-align: center; }
 
-            .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-            .chart-box { padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: var(--card-2); }
-            .chart-box h3 { margin-bottom: 13px; }
-            .compare-row { display: grid; margin-bottom: 11px; grid-template-columns: 110px minmax(0,1fr) 46px; align-items: center; gap: 8px; color: var(--muted); font-size: .68rem; }
-            .mini-track { height: 10px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.08); }
-            .mini-bar { display: block; height: 100%; border-radius: inherit; background: var(--cyan); }
-            .mini-bar--gold { background: var(--gold); }
-            .comparison-alert { margin: 13px 0 0; padding: 10px 12px; border-left: 3px solid var(--green); color: var(--muted); background: rgba(80,200,120,.07); font-size: .7rem; line-height: 1.45; }
-            .comparison-alert.is-warning { border-color: var(--orange); background: rgba(242,184,75,.07); }
-
-            .monthly-chart { display: flex; min-height: 180px; padding-top: 16px; align-items: flex-end; gap: 9px; overflow-x: auto; }
-            .month-column { display: grid; min-width: 58px; height: 165px; grid-template-rows: 1fr auto auto; align-items: end; gap: 5px; text-align: center; }
-            .month-bar-wrap { display: flex; height: 115px; align-items: flex-end; justify-content: center; }
-            .month-bar { width: 25px; min-height: 3px; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, var(--cyan), var(--cyan-deep)); }
-            .month-column strong { color: var(--text); font-size: .56rem; }
-            .month-column small { color: var(--muted); font-size: .54rem; text-transform: capitalize; }
-
             dialog { width: min(430px, calc(100% - 28px)); padding: 0; border: 1px solid var(--line); border-radius: 15px; color: var(--text); background: #11191b; box-shadow: 0 28px 90px rgba(0,0,0,.65); }
             dialog::backdrop { background: rgba(0,0,0,.72); backdrop-filter: blur(4px); }
             .dialog-body { padding: 22px; }
@@ -360,7 +343,7 @@
             html.light-mode .project-search, html.light-mode .field input, html.light-mode .field select, html.light-mode .field textarea, html.light-mode .required-document-form input[type="file"], html.light-mode .gallery-upload-form input[type="file"] { color: var(--text); background: #f8fafb; }
             html.light-mode .section-nav { background: rgba(255,255,255,.94); }
             html.light-mode .section-nav button:hover { color: var(--text); }
-            html.light-mode .progress-track, html.light-mode .mini-track { background: rgba(31,57,79,.1); }
+            html.light-mode .progress-track { background: rgba(31,57,79,.1); }
             html.light-mode dialog { background: #fff; }
 
             @media (max-width: 1050px) {
@@ -368,7 +351,6 @@
                 .summary-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
                 .funding-form { grid-template-columns: 1fr 1fr; }
                 .required-documents-grid { grid-template-columns: 1fr; }
-                .analysis-grid { grid-template-columns: 1fr; }
             }
 
             @media (max-width: 720px) {
@@ -416,9 +398,6 @@
                         <button type="button" data-scroll-to="funding-section">Fuentes</button>
                         <button type="button" data-scroll-to="required-documents-section">Documentos</button>
                         <button type="button" data-scroll-to="project-gallery-section">Álbum</button>
-                        @unless($readOnly)
-                        <button type="button" data-scroll-to="analysis-section">Análisis</button>
-                        @endunless
                     </nav>
 
                     <section id="financial-summary">
@@ -513,26 +492,6 @@
                         <div class="gallery-grid" id="project-gallery"></div>
                     </section>
 
-                    @unless($readOnly)
-                    <section class="content-card" id="analysis-section">
-                        <div class="card-head"><div><h2>Análisis financiero</h2><p class="section-copy">Comparación de presupuesto, ejecución y avance por período.</p></div></div>
-                        <div class="analysis-grid">
-                            <div class="chart-box">
-                                <h3>Presupuesto vs. ejecutado</h3>
-                                <div class="compare-row"><span>Presupuesto</span><div class="mini-track"><span class="mini-bar mini-bar--gold" id="budget-compare-bar"></span></div><strong>100%</strong></div>
-                                <div class="compare-row"><span>Ejecutado</span><div class="mini-track"><span class="mini-bar" id="executed-compare-bar"></span></div><strong id="executed-compare-label"></strong></div>
-                                <h3 style="margin-top:20px">Avance físico vs. financiero</h3>
-                                <div class="compare-row"><span>Físico</span><div class="mini-track"><span class="mini-bar mini-bar--gold" id="physical-compare-bar"></span></div><strong id="physical-compare-label"></strong></div>
-                                <div class="compare-row"><span>Financiero</span><div class="mini-track"><span class="mini-bar" id="financial-compare-bar"></span></div><strong id="financial-compare-label"></strong></div>
-                                <p class="comparison-alert" id="comparison-alert"></p>
-                            </div>
-                            <div class="chart-box">
-                                <h3>Ejecución financiera por período</h3>
-                                <div class="monthly-chart" id="monthly-chart"></div>
-                            </div>
-                        </div>
-                    </section>
-                    @endunless
                 </article>
             </section>
         </main>
@@ -763,48 +722,6 @@
                     });
                 };
 
-                const renderAnalysis = (project) => {
-                    const cappedFinancial = Math.min(100, Number(project.financial_progress));
-                    const cappedPhysical = Math.min(100, Number(project.physical_progress));
-                    $('#budget-compare-bar').style.width = project.allocated_budget > 0 ? '100%' : '0%';
-                    $('#executed-compare-bar').style.width = `${cappedFinancial}%`;
-                    $('#executed-compare-label').textContent = percent(project.financial_progress);
-                    $('#physical-compare-bar').style.width = `${cappedPhysical}%`;
-                    $('#physical-compare-label').textContent = percent(project.physical_progress);
-                    $('#financial-compare-bar').style.width = `${cappedFinancial}%`;
-                    $('#financial-compare-label').textContent = percent(project.financial_progress);
-
-                    const alert = $('#comparison-alert');
-                    const messages = {
-                        balanced: 'Ejecución equilibrada: el avance físico y financiero mantienen una diferencia aceptable.',
-                        financial_ahead: `⚠ La ejecución financiera supera al avance físico por ${percent(Math.abs(project.progress_difference))}. Revisa el uso de los recursos.`,
-                        physical_ahead: `El avance físico supera a la ejecución financiera por ${percent(Math.abs(project.progress_difference))}.`,
-                    };
-                    alert.textContent = messages[project.comparison_status];
-                    alert.classList.toggle('is-warning', project.comparison_status === 'financial_ahead');
-
-                    const monthly = $('#monthly-chart');
-                    monthly.replaceChildren();
-                    if (!project.monthly_execution.length) {
-                        monthly.append(createText('p', 'Aún no hay ejecución financiera para mostrar por período.', 'section-copy'));
-                        return;
-                    }
-                    const maximum = Math.max(...project.monthly_execution.map((item) => Number(item.amount)), 1);
-                    project.monthly_execution.forEach((item) => {
-                        const column = document.createElement('div');
-                        column.className = 'month-column';
-                        const wrap = document.createElement('div');
-                        wrap.className = 'month-bar-wrap';
-                        const bar = document.createElement('span');
-                        bar.className = 'month-bar';
-                        bar.style.height = `${Math.max(3, (Number(item.amount) / maximum) * 100)}%`;
-                        bar.title = money.format(item.amount);
-                        wrap.append(bar);
-                        column.append(wrap, createText('strong', money.format(item.amount)), createText('small', item.label));
-                        monthly.append(column);
-                    });
-                };
-
                 const renderSelectedProject = () => {
                     const project = selectedProject();
                     empty.hidden = Boolean(project);
@@ -840,7 +757,6 @@
                     renderFunding(project);
                     renderRequiredDocuments(project);
                     renderGallery(project);
-                    if (!readOnly) renderAnalysis(project);
                 };
 
                 const jsonRequest = async (url, method, payload) => {
