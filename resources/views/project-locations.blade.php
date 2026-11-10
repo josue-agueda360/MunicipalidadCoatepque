@@ -480,10 +480,32 @@
                 flex: 1;
                 align-content: start;
                 gap: 8px;
-                overflow-y: auto;
+                overflow-y: scroll;
+                overscroll-behavior: contain;
                 list-style: none;
+                scrollbar-gutter: stable;
                 scrollbar-color: rgba(49, 169, 214, 0.7) transparent;
                 scrollbar-width: thin;
+            }
+
+            .project-results::-webkit-scrollbar {
+                width: 9px;
+            }
+
+            .project-results::-webkit-scrollbar-track {
+                background: rgba(255, 255, 255, 0.035);
+            }
+
+            .project-results::-webkit-scrollbar-thumb {
+                border: 2px solid transparent;
+                border-radius: 999px;
+                background: rgba(49, 169, 214, 0.72);
+                background-clip: padding-box;
+            }
+
+            .project-results::-webkit-scrollbar-thumb:hover {
+                background: rgba(49, 169, 214, 0.95);
+                background-clip: padding-box;
             }
 
             .project-result {
@@ -1101,14 +1123,16 @@
             .is-embedded .location-workspace {
                 grid-template-columns: minmax(300px, 350px) minmax(0, 1fr);
                 width: 100%;
-                min-height: 100vh;
+                height: 100vh;
+                min-height: 0;
                 border: 0;
                 border-radius: 0;
             }
 
             .is-embedded .project-finder,
             .is-embedded .map-panel {
-                min-height: 100vh;
+                height: 100%;
+                min-height: 0;
             }
 
             @media (max-width: 1100px) {
