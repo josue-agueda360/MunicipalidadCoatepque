@@ -55,7 +55,7 @@ class ProjectMonitoringController extends Controller
                 'integer',
                 Rule::unique('project_monitorings', 'project_id'),
             ],
-            'project_name' => ['required', 'string', 'max:150'],
+            'project_name' => ['required', 'string', 'max:200'],
             'status' => [
                 'required',
                 Rule::in(array_keys(ProjectMonitoring::STATUSES)),
@@ -70,7 +70,7 @@ class ProjectMonitoringController extends Controller
             'description' => ['nullable', 'string', 'max:3000'],
         ], [
             'project_name.required' => 'Escribe el nombre del proyecto.',
-            'project_name.max' => 'El nombre puede tener hasta 150 caracteres.',
+            'project_name.max' => 'El nombre puede tener hasta 200 caracteres.',
             'project_id.unique' => 'Este proyecto ya tiene un registro de monitoreo.',
             'status.required' => 'Selecciona el estado del proyecto.',
             'status.in' => 'El estado seleccionado no es válido.',

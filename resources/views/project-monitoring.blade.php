@@ -1048,7 +1048,7 @@
                                         id="project-name"
                                         name="project_name"
                                         type="text"
-                                        maxlength="150"
+                                        maxlength="200"
                                         placeholder="Escribe SNIP o nombre del proyecto"
                                         autocomplete="off"
                                         aria-autocomplete="list"

@@ -84,6 +84,8 @@ test('an authenticated user sees all shared projects in monitoring', function ()
         ->assertSee('Proyecto que no debe aparecer')
         ->assertSee('name="project_id"', false)
         ->assertSee('name="project_name"', false)
+        ->assertSee('id="project-name"', false)
+        ->assertSee('maxlength="200"', false)
         ->assertSee('name="status"', false)
         ->assertSee('name="category"', false)
         ->assertSee('name="starts_on"', false)
@@ -332,6 +334,29 @@ test('monitoring validates states categories dates and blank text', function () 
         ]);
 
     expect(ProjectMonitoring::query()->count())->toBe(0);
+});
+
+test('a monitoring project name accepts 200 characters but rejects 201', function () {
+    $user = User::factory()->create();
+    $acceptedName = str_repeat('A', 200);
+
+    $this->actingAs($user)
+        ->postJson(route('project-monitoring.store'), validMonitoringPayload([
+            'project_name' => $acceptedName,
+        ]))
+        ->assertCreated()
+        ->assertJsonPath('record.project_name', $acceptedName);
+
+    $this->actingAs($user)
+        ->postJson(route('project-monitoring.store'), validMonitoringPayload([
+            'project_name' => str_repeat('B', 201),
+        ]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('project_name')
+        ->assertJsonPath(
+            'errors.project_name.0',
+            'El nombre puede tener hasta 200 caracteres.',
+        );
 });
 
 test('saved monitoring records are visible to every authenticated user', function () {
