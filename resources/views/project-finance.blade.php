@@ -134,6 +134,27 @@
             .project-option strong { font-size: 0.77rem; }
             .project-option small { margin-top: 4px; color: var(--muted); font-size: 0.67rem; }
 
+            .project-name-tooltip {
+                position: fixed;
+                z-index: 30;
+                width: max-content;
+                max-width: min(420px, calc(100vw - 24px));
+                padding: 9px 11px;
+                border: 1px solid rgba(42, 165, 211, 0.45);
+                border-radius: 9px;
+                color: var(--text);
+                background: rgba(13, 21, 23, 0.98);
+                box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
+                font-size: 0.72rem;
+                font-weight: 800;
+                line-height: 1.42;
+                overflow-wrap: anywhere;
+                pointer-events: none;
+                backdrop-filter: blur(10px);
+            }
+
+            .project-name-tooltip[hidden] { display: none; }
+
             .finance-content {
                 min-width: 0;
                 height: 100vh;
@@ -345,6 +366,7 @@
             html.light-mode .section-nav button:hover { color: var(--text); }
             html.light-mode .progress-track { background: rgba(31,57,79,.1); }
             html.light-mode dialog { background: #fff; }
+            html.light-mode .project-name-tooltip { background: rgba(255,255,255,.98); box-shadow: 0 12px 30px rgba(31,57,79,.2); }
 
             @media (max-width: 1050px) {
                 .finance-shell { grid-template-columns: 260px minmax(0,1fr); }
@@ -506,6 +528,7 @@
             </form>
         </dialog>
 
+        <div class="project-name-tooltip" id="finance-project-tooltip" role="tooltip" hidden></div>
         <div class="toast" id="finance-toast" role="status" hidden></div>
 
         <script>
@@ -527,6 +550,7 @@
                 const list = $('#finance-project-list');
                 const search = $('#finance-project-search');
                 const count = $('#finance-project-count');
+                const projectTooltip = $('#finance-project-tooltip');
                 const toast = $('#finance-toast');
                 const empty = $('#finance-empty');
                 const panel = $('#project-finance');
@@ -555,6 +579,61 @@
                     return element;
                 };
 
+                const hideProjectTooltip = () => {
+                    projectTooltip.hidden = true;
+                    list.querySelectorAll('[aria-describedby="finance-project-tooltip"]').forEach((button) => {
+                        button.removeAttribute('aria-describedby');
+                    });
+                };
+
+                const showProjectTooltip = (button) => {
+                    const fullName = button.dataset.fullProjectName;
+                    if (!fullName) return;
+
+                    projectTooltip.textContent = fullName;
+                    projectTooltip.hidden = false;
+                    button.setAttribute('aria-describedby', 'finance-project-tooltip');
+
+                    const buttonRect = button.getBoundingClientRect();
+                    const tooltipRect = projectTooltip.getBoundingClientRect();
+                    const margin = 10;
+                    let left = buttonRect.right + margin;
+
+                    if (left + tooltipRect.width > window.innerWidth - 12) {
+                        left = Math.max(12, buttonRect.left - tooltipRect.width - margin);
+                    }
+
+                    const top = Math.min(
+                        window.innerHeight - tooltipRect.height - 12,
+                        Math.max(12, buttonRect.top + (buttonRect.height - tooltipRect.height) / 2),
+                    );
+
+                    projectTooltip.style.left = `${left}px`;
+                    projectTooltip.style.top = `${top}px`;
+                };
+
+                list.addEventListener('pointerover', (event) => {
+                    const button = event.target.closest('.project-option');
+                    if (button && list.contains(button)) showProjectTooltip(button);
+                });
+
+                list.addEventListener('pointerout', (event) => {
+                    const button = event.target.closest('.project-option');
+                    if (button && !button.contains(event.relatedTarget)) hideProjectTooltip();
+                });
+
+                list.addEventListener('focusin', (event) => {
+                    const button = event.target.closest('.project-option');
+                    if (button) showProjectTooltip(button);
+                });
+
+                list.addEventListener('focusout', (event) => {
+                    if (event.target.closest('.project-option')) hideProjectTooltip();
+                });
+
+                window.addEventListener('scroll', hideProjectTooltip, true);
+                window.addEventListener('resize', hideProjectTooltip);
+
                 const renderProjectList = () => {
                     const query = search.value.trim().toLocaleLowerCase('es');
                     const filtered = projects.filter((project) => `${project.snip ?? ''} ${project.name} ${project.place ?? ''}`.toLocaleLowerCase('es').includes(query));
@@ -566,6 +645,7 @@
                         const button = document.createElement('button');
                         button.type = 'button';
                         button.className = `project-option${project.id === selectedProjectId ? ' is-active' : ''}`;
+                        button.dataset.fullProjectName = `${project.snip ? `${project.snip}-` : ''}${project.name}`;
                         const pin = createText('span', '', 'project-pin');
                         pin.append(createText('span', String(index + 1).padStart(2, '0')));
                         const copy = document.createElement('span');

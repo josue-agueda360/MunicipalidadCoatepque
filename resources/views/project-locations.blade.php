@@ -563,6 +563,29 @@
                 font-size: 1.05rem;
             }
 
+            .project-name-tooltip {
+                position: fixed;
+                z-index: 2600;
+                width: max-content;
+                max-width: min(420px, calc(100vw - 24px));
+                padding: 9px 11px;
+                border: 1px solid rgba(49, 169, 214, 0.42);
+                border-radius: 9px;
+                color: #f8f5ec;
+                background: rgba(13, 19, 21, 0.98);
+                box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
+                font-size: 0.72rem;
+                font-weight: 800;
+                line-height: 1.42;
+                overflow-wrap: anywhere;
+                pointer-events: none;
+                backdrop-filter: blur(10px);
+            }
+
+            .project-name-tooltip[hidden] {
+                display: none;
+            }
+
             .empty-results {
                 margin: 16px 18px;
                 padding: 22px 16px;
@@ -1052,6 +1075,13 @@
                 background: rgba(49, 169, 214, 0.09);
             }
 
+            html.light-mode .project-name-tooltip {
+                border-color: rgba(19, 107, 145, 0.28);
+                color: #172033;
+                background: rgba(255, 255, 255, 0.98);
+                box-shadow: 0 12px 30px rgba(31, 57, 79, 0.2);
+            }
+
             html.light-mode .back-to-search,
             html.light-mode .request-location {
                 color: #0e668a;
@@ -1295,6 +1325,7 @@
                                         type="button"
                                         data-location-project="{{ $project['id'] }}"
                                         data-project-search="{{ mb_strtolower(($project['snip'] ? $project['snip'].' ' : '').$project['name']) }}"
+                                        data-full-project-name="@if ($project['snip']){{ $project['snip'] }}-@endif{{ $project['name'] }}"
                                         style="--marker-color: {{ $project['color'] }}"
                                     >
                                         <span class="result-marker" aria-hidden="true">
@@ -1430,6 +1461,13 @@
                 </div>
             </section>
         </main>
+
+        <div
+            class="project-name-tooltip"
+            id="location-project-tooltip"
+            role="tooltip"
+            hidden
+        ></div>
 
         <script src="https://cdn.jsdelivr.net/npm/cesium@1.143.0/Build/Cesium/Cesium.js"></script>
         <script src="https://unpkg.com/@esri/arcgis-rest-request@4/dist/bundled/request.umd.js"></script>
@@ -1628,6 +1666,9 @@
                 const resultList = document.getElementById(
                     'project-location-results',
                 );
+                const projectTooltip = document.getElementById(
+                    'location-project-tooltip',
+                );
                 const resultButtons = Array.from(
                     document.querySelectorAll('[data-location-project]'),
                 );
@@ -1658,6 +1699,84 @@
                 );
                 const mapSelection = document.getElementById('map-selection');
                 const mapStatus = document.getElementById('map-status');
+
+                const hideProjectTooltip = () => {
+                    projectTooltip.hidden = true;
+                    resultButtons.forEach((button) => {
+                        button.removeAttribute('aria-describedby');
+                    });
+                };
+
+                const showProjectTooltip = (button) => {
+                    const fullName = button.dataset.fullProjectName;
+                    if (!fullName) return;
+
+                    projectTooltip.textContent = fullName;
+                    projectTooltip.hidden = false;
+                    button.setAttribute(
+                        'aria-describedby',
+                        'location-project-tooltip',
+                    );
+
+                    const buttonRect = button.getBoundingClientRect();
+                    const tooltipRect = projectTooltip.getBoundingClientRect();
+                    const margin = 10;
+                    let left = buttonRect.right + margin;
+
+                    if (left + tooltipRect.width > window.innerWidth - 12) {
+                        left = Math.max(
+                            12,
+                            buttonRect.left - tooltipRect.width - margin,
+                        );
+                    }
+
+                    const top = Math.min(
+                        window.innerHeight - tooltipRect.height - 12,
+                        Math.max(
+                            12,
+                            buttonRect.top
+                                + (buttonRect.height - tooltipRect.height) / 2,
+                        ),
+                    );
+
+                    projectTooltip.style.left = `${left}px`;
+                    projectTooltip.style.top = `${top}px`;
+                };
+
+                resultList.addEventListener('pointerover', (event) => {
+                    const button = event.target.closest('.project-result');
+                    if (button && resultList.contains(button)) {
+                        showProjectTooltip(button);
+                    }
+                });
+
+                resultList.addEventListener('pointerout', (event) => {
+                    const button = event.target.closest('.project-result');
+                    if (
+                        button
+                        && !button.contains(event.relatedTarget)
+                    ) {
+                        hideProjectTooltip();
+                    }
+                });
+
+                resultList.addEventListener('focusin', (event) => {
+                    const button = event.target.closest('.project-result');
+                    if (button) showProjectTooltip(button);
+                });
+
+                resultList.addEventListener('focusout', (event) => {
+                    if (event.target.closest('.project-result')) {
+                        hideProjectTooltip();
+                    }
+                });
+
+                window.addEventListener(
+                    'scroll',
+                    hideProjectTooltip,
+                    true,
+                );
+                window.addEventListener('resize', hideProjectTooltip);
                 const arcGisApiKey = @js(config('services.arcgis.api_key'));
                 const arcGisServicesUrl =
                     'https://server.arcgisonline.com/ArcGIS/rest/services/';
