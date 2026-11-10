@@ -1042,6 +1042,29 @@
                 display: none;
             }
 
+            .project-hover-tooltip {
+                position: fixed;
+                z-index: 2600;
+                width: max-content;
+                max-width: min(420px, calc(100vw - 24px));
+                padding: 9px 11px;
+                border: 1px solid rgba(49, 169, 214, 0.38);
+                border-radius: 9px;
+                color: #f8f5ec;
+                background: rgba(13, 19, 21, 0.97);
+                box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
+                font-size: 0.72rem;
+                font-weight: 700;
+                line-height: 1.42;
+                overflow-wrap: anywhere;
+                pointer-events: none;
+                backdrop-filter: blur(10px);
+            }
+
+            .project-hover-tooltip[hidden] {
+                display: none;
+            }
+
             .project-pin {
                 display: grid;
                 width: 24px;
@@ -1861,6 +1884,13 @@
                 background: rgba(49, 169, 214, 0.09);
             }
 
+            html.light-mode .project-hover-tooltip {
+                border-color: rgba(19, 107, 145, 0.28);
+                color: #172033;
+                background: rgba(255, 255, 255, 0.98);
+                box-shadow: 0 12px 30px rgba(31, 57, 79, 0.2);
+            }
+
             html.light-mode .project-files-panel {
                 background: #f4f8fa;
             }
@@ -2264,6 +2294,7 @@
                                                     type="button"
                                                     data-project="{{ $project->id }}"
                                                     data-search="{{ mb_strtolower($project->name.' '.$project->place.' '.($project->snip ?? '')) }}"
+                                                    data-full-project-name="@if ($project->snip){{ $project->snip }}-@endif{{ $project->name }}"
                                                 >
                                                     <span
                                                         class="project-pin"
@@ -2502,6 +2533,13 @@
                 Eliminar
             </button>
         </div>
+
+        <div
+            class="project-hover-tooltip"
+            id="project-hover-tooltip"
+            role="tooltip"
+            hidden
+        ></div>
 
         <div
             class="folder-context-menu"
@@ -3180,6 +3218,9 @@
                     });
 
                 const folderList = document.getElementById('project-folders');
+                const projectHoverTooltip = document.getElementById(
+                    'project-hover-tooltip',
+                );
                 const projectsTreeView = document.getElementById(
                     'projects-tree-view',
                 );
@@ -3277,6 +3318,102 @@
                 const coatepequeProjectCenter = [14.7000, -91.8667];
                 const latitudeExample = 'Ejemplo: 14°42\'25.49"N';
                 const longitudeExample = 'Ejemplo: 91°59\'43.17"O';
+
+                const hideProjectHoverTooltip = () => {
+                    projectHoverTooltip.hidden = true;
+                    document.querySelectorAll(
+                        '[aria-describedby="project-hover-tooltip"]',
+                    ).forEach((projectItem) => {
+                        projectItem.removeAttribute('aria-describedby');
+                    });
+                };
+
+                const showProjectHoverTooltip = (projectItem) => {
+                    const fullName = projectItem.dataset.fullProjectName;
+
+                    if (!fullName) {
+                        hideProjectHoverTooltip();
+
+                        return;
+                    }
+
+                    projectHoverTooltip.textContent = fullName;
+                    projectHoverTooltip.hidden = false;
+                    projectItem.setAttribute(
+                        'aria-describedby',
+                        'project-hover-tooltip',
+                    );
+
+                    const itemRect = projectItem.getBoundingClientRect();
+                    const tooltipRect = projectHoverTooltip.getBoundingClientRect();
+                    const margin = 10;
+                    let left = itemRect.right + margin;
+
+                    if (left + tooltipRect.width > window.innerWidth - 12) {
+                        left = Math.max(
+                            12,
+                            itemRect.left - tooltipRect.width - margin,
+                        );
+                    }
+
+                    const top = Math.min(
+                        window.innerHeight - tooltipRect.height - 12,
+                        Math.max(
+                            12,
+                            itemRect.top
+                                + (itemRect.height - tooltipRect.height) / 2,
+                        ),
+                    );
+
+                    projectHoverTooltip.style.left = `${left}px`;
+                    projectHoverTooltip.style.top = `${top}px`;
+                };
+
+                folderList.addEventListener('pointerover', (event) => {
+                    const projectItem = event.target.closest(
+                        '.project-item[data-project]',
+                    );
+
+                    if (projectItem && folderList.contains(projectItem)) {
+                        showProjectHoverTooltip(projectItem);
+                    }
+                });
+
+                folderList.addEventListener('pointerout', (event) => {
+                    const projectItem = event.target.closest(
+                        '.project-item[data-project]',
+                    );
+
+                    if (
+                        projectItem
+                        && !projectItem.contains(event.relatedTarget)
+                    ) {
+                        hideProjectHoverTooltip();
+                    }
+                });
+
+                folderList.addEventListener('focusin', (event) => {
+                    const projectItem = event.target.closest(
+                        '.project-item[data-project]',
+                    );
+
+                    if (projectItem) {
+                        showProjectHoverTooltip(projectItem);
+                    }
+                });
+
+                folderList.addEventListener('focusout', (event) => {
+                    if (event.target.closest('.project-item[data-project]')) {
+                        hideProjectHoverTooltip();
+                    }
+                });
+
+                window.addEventListener(
+                    'scroll',
+                    hideProjectHoverTooltip,
+                    true,
+                );
+                window.addEventListener('resize', hideProjectHoverTooltip);
 
                 const syncCoordinateFallback = () => {
                     const useCoatepequeCenter = projectNoCoordinates.checked;
