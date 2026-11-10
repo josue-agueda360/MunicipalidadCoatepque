@@ -3,8 +3,16 @@
 use App\Models\ProjectMonitoring;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
+
+beforeEach(function () {
+    config()->set(
+        'security.document_delete_code_hash',
+        Hash::make('59264018'),
+    );
+});
 
 function monitoringProjectFor(User $user, array $attributes = []): \App\Models\Project
 {
@@ -84,6 +92,10 @@ test('an authenticated user sees all shared projects in monitoring', function ()
         ->assertSee('name="description"', false)
         ->assertSee('id="monitoring-status-filter"', false)
         ->assertSee('data-monitoring-status', false)
+        ->assertSee('data-delete-monitoring', false)
+        ->assertSee('id="monitoring-delete-dialog"', false)
+        ->assertSee('autocomplete="one-time-code"', false)
+        ->assertSee('data-lpignore="true"', false)
         ->assertSee('municipal_portal_theme', false)
         ->assertSee("event.data?.type === 'theme-changed'", false)
         ->assertSee('html.light-mode .panel', false)
@@ -95,6 +107,43 @@ test('an authenticated user sees all shared projects in monitoring', function ()
         ->assertSee('Cerrado')
         ->assertSee('Licitación')
         ->assertSee('Cotización');
+});
+
+test('a monitoring record can be deleted with the security code', function () {
+    $user = User::factory()->create();
+    $project = monitoringProjectFor($user);
+    $record = $user->projectMonitorings()->create([
+        'project_id' => $project->id,
+        'project_name' => $project->name,
+        'status' => 'closed',
+        'category' => 'tender',
+        'starts_on' => '2026-01-01',
+        'ends_on' => '2026-10-31',
+        'location' => $project->place,
+    ]);
+
+    $this->actingAs($user)
+        ->deleteJson(route('project-monitoring.destroy', $record), [
+            'code' => '00000000',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('code');
+
+    $this->assertDatabaseHas('project_monitorings', ['id' => $record->id]);
+
+    $this->actingAs($user)
+        ->deleteJson(route('project-monitoring.destroy', $record), [
+            'code' => '59264018',
+        ])
+        ->assertOk()
+        ->assertJsonPath(
+            'message',
+            'Registro de monitoreo eliminado correctamente.',
+        )
+        ->assertJsonPath('available_project.id', $project->id);
+
+    $this->assertDatabaseMissing('project_monitorings', ['id' => $record->id]);
+    $this->assertDatabaseHas('projects', ['id' => $project->id]);
 });
 
 test('an owner can change a saved monitoring status', function () {

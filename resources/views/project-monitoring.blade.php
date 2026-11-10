@@ -710,6 +710,101 @@
                 gap: 7px;
             }
 
+            .record-actions {
+                display: flex;
+                margin-top: 12px;
+                justify-content: flex-end;
+            }
+
+            .record-delete-button {
+                padding: 5px 9px;
+                border: 1px solid transparent;
+                border-radius: 7px;
+                color: rgba(238, 133, 133, 0.68);
+                background: transparent;
+                font-size: 0.64rem;
+                font-weight: 750;
+                opacity: 0.72;
+            }
+
+            .record-delete-button:hover,
+            .record-delete-button:focus-visible {
+                border-color: rgba(238, 133, 133, 0.34);
+                outline: none;
+                color: var(--danger);
+                background: rgba(238, 133, 133, 0.07);
+                opacity: 1;
+            }
+
+            .monitoring-delete-dialog {
+                width: min(430px, calc(100vw - 28px));
+                padding: 0;
+                border: 1px solid rgba(49, 169, 214, 0.3);
+                border-radius: 15px;
+                color: var(--text);
+                background: #101719;
+                box-shadow: 0 25px 70px rgba(0, 0, 0, 0.66);
+            }
+
+            .monitoring-delete-dialog::backdrop {
+                background: rgba(0, 0, 0, 0.72);
+                backdrop-filter: blur(3px);
+            }
+
+            .monitoring-delete-form {
+                padding: 22px;
+            }
+
+            .monitoring-delete-form h2 {
+                margin-bottom: 7px;
+                font-size: 1.08rem;
+            }
+
+            .monitoring-delete-form p {
+                margin: 0 0 17px;
+                color: var(--muted);
+                font-size: 0.76rem;
+                line-height: 1.5;
+            }
+
+            .monitoring-delete-form strong {
+                color: var(--text);
+            }
+
+            .monitoring-delete-code {
+                -webkit-text-security: disc;
+            }
+
+            .monitoring-delete-error {
+                min-height: 19px;
+                margin: 8px 0 0 !important;
+                color: var(--danger) !important;
+                font-size: 0.7rem !important;
+            }
+
+            .monitoring-delete-actions {
+                display: flex;
+                margin-top: 15px;
+                justify-content: flex-end;
+                gap: 9px;
+            }
+
+            .monitoring-dialog-button {
+                min-height: 38px;
+                padding: 0 14px;
+                border: 1px solid var(--line);
+                border-radius: 9px;
+                color: var(--text);
+                background: rgba(255, 255, 255, 0.045);
+                font-weight: 800;
+            }
+
+            .monitoring-dialog-button--danger {
+                border-color: rgba(238, 133, 133, 0.42);
+                color: #ffd4d4;
+                background: rgba(238, 133, 133, 0.11);
+            }
+
             .kind-badge {
                 color: #e9e5dc;
             }
@@ -1159,6 +1254,16 @@
                                                 : 'Solo en Monitoreo' }}
                                         </span>
                                     </div>
+                                    @unless($readOnly)
+                                        <div class="record-actions">
+                                            <button
+                                                class="record-delete-button"
+                                                type="button"
+                                                data-delete-monitoring
+                                                data-record-name="{{ $record['project_name'] }}"
+                                            >Eliminar registro</button>
+                                        </div>
+                                    @endunless
                                 </div>
                             </details>
                         @endforeach
@@ -1183,6 +1288,43 @@
             </div>
         </main>
 
+        @unless($readOnly)
+            <dialog class="monitoring-delete-dialog" id="monitoring-delete-dialog">
+                <form class="monitoring-delete-form" id="monitoring-delete-form" novalidate autocomplete="off">
+                    <h2>Eliminar registro</h2>
+                    <p>
+                        Se eliminará únicamente “<strong id="monitoring-delete-name"></strong>”.
+                        Esta acción no se puede deshacer.
+                    </p>
+                    <div class="field">
+                        <label for="monitoring-delete-code">Código de seguridad</label>
+                        <input
+                            class="monitoring-delete-code"
+                            id="monitoring-delete-code"
+                            name="manual_monitoring_delete_key"
+                            type="text"
+                            inputmode="numeric"
+                            pattern="[0-9]{8}"
+                            maxlength="8"
+                            autocomplete="one-time-code"
+                            autocapitalize="none"
+                            spellcheck="false"
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            data-bwignore="true"
+                            readonly
+                            required
+                        >
+                    </div>
+                    <p class="monitoring-delete-error" id="monitoring-delete-error" role="alert"></p>
+                    <div class="monitoring-delete-actions">
+                        <button class="monitoring-dialog-button" id="cancel-monitoring-delete" type="button">Cancelar</button>
+                        <button class="monitoring-dialog-button monitoring-dialog-button--danger" id="confirm-monitoring-delete" type="submit">Eliminar</button>
+                    </div>
+                </form>
+            </dialog>
+        @endunless
+
         <script>
             (() => {
                 let availableProjects = @json($projects);
@@ -1191,6 +1333,10 @@
                 const storeUrl = @json(route('project-monitoring.store'));
                 const statusUpdateUrlTemplate = @json(route(
                     'project-monitoring.status',
+                    ['projectMonitoring' => '__MONITORING_ID__'],
+                ));
+                const deleteUrlTemplate = @json(route(
+                    'project-monitoring.destroy',
                     ['projectMonitoring' => '__MONITORING_ID__'],
                 ));
                 const csrfToken = document.querySelector(
@@ -1230,6 +1376,19 @@
                 const recordsMessage = document.getElementById(
                     'records-message',
                 );
+                const deleteDialog = document.getElementById(
+                    'monitoring-delete-dialog',
+                );
+                const deleteForm = document.getElementById(
+                    'monitoring-delete-form',
+                );
+                const deleteCode = document.getElementById(
+                    'monitoring-delete-code',
+                );
+                const deleteError = document.getElementById(
+                    'monitoring-delete-error',
+                );
+                let pendingDeleteCard = null;
                 let activeSuggestion = -1;
                 let visibleSuggestions = [];
 
@@ -1526,6 +1685,21 @@
                         : 'Solo en Monitoreo';
                     badges.append(category, link);
                     details.append(facts, description, badges);
+
+                    if (!readOnly) {
+                        const actions = document.createElement('div');
+                        const remove = document.createElement('button');
+
+                        actions.className = 'record-actions';
+                        remove.className = 'record-delete-button';
+                        remove.type = 'button';
+                        remove.dataset.deleteMonitoring = '';
+                        remove.dataset.recordName = record.project_name;
+                        remove.textContent = 'Eliminar registro';
+                        actions.append(remove);
+                        details.append(actions);
+                    }
+
                     card.append(summary, details);
 
                     return card;
@@ -1610,6 +1784,111 @@
                         );
                     } finally {
                         statusSelect.disabled = false;
+                    }
+                });
+
+                recordsList.addEventListener('click', (event) => {
+                    if (readOnly) return;
+
+                    const remove = event.target.closest(
+                        '[data-delete-monitoring]',
+                    );
+
+                    if (!remove) return;
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    pendingDeleteCard = remove.closest('.record-card');
+                    document.getElementById('monitoring-delete-name')
+                        .textContent = remove.dataset.recordName;
+                    deleteCode.value = '';
+                    deleteError.textContent = '';
+                    deleteCode.setAttribute('readonly', '');
+                    deleteDialog.showModal();
+                    deleteCode.focus();
+                });
+
+                deleteCode?.addEventListener('focus', () => {
+                    deleteCode.removeAttribute('readonly');
+                });
+
+                deleteCode?.addEventListener('blur', () => {
+                    deleteCode.setAttribute('readonly', '');
+                });
+
+                deleteCode?.addEventListener('input', () => {
+                    deleteCode.value = deleteCode.value.replace(/\D/g, '');
+                    deleteError.textContent = '';
+                });
+
+                document.getElementById('cancel-monitoring-delete')
+                    ?.addEventListener('click', () => {
+                        pendingDeleteCard = null;
+                        deleteCode.value = '';
+                        deleteDialog.close();
+                    });
+
+                deleteForm?.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+
+                    if (!pendingDeleteCard) return;
+
+                    const recordId = pendingDeleteCard.dataset.recordId;
+                    const confirmButton = document.getElementById(
+                        'confirm-monitoring-delete',
+                    );
+                    confirmButton.disabled = true;
+                    deleteError.textContent = '';
+
+                    try {
+                        const response = await fetch(
+                            deleteUrlTemplate.replace(
+                                '__MONITORING_ID__',
+                                recordId,
+                            ),
+                            {
+                                method: 'DELETE',
+                                credentials: 'same-origin',
+                                headers: {
+                                    Accept: 'application/json',
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                },
+                                body: JSON.stringify({
+                                    code: deleteCode.value,
+                                }),
+                            },
+                        );
+                        const result = await response.json().catch(() => ({}));
+
+                        if (!response.ok) {
+                            throw new Error(
+                                result.errors?.code?.[0]
+                                    || result.message
+                                    || 'No fue posible eliminar el registro.',
+                            );
+                        }
+
+                        if (result.available_project) {
+                            availableProjects.push(result.available_project);
+                        }
+
+                        pendingDeleteCard.remove();
+                        pendingDeleteCard = null;
+                        countElement.textContent = String(
+                            Math.max(0, Number(countElement.textContent) - 1),
+                        );
+                        deleteCode.value = '';
+                        deleteDialog.close();
+                        applyStatusFilter();
+                        showRecordsMessage(result.message);
+                    } catch (error) {
+                        deleteError.textContent = error.message
+                            || 'No fue posible eliminar el registro.';
+                        deleteCode.focus();
+                        deleteCode.select();
+                    } finally {
+                        confirmButton.disabled = false;
                     }
                 });
 

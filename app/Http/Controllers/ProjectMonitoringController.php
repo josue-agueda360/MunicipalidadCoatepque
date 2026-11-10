@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\ProjectMonitoring;
+use App\Support\DeletionCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -164,6 +165,30 @@ class ProjectMonitoringController extends Controller
         return response()->json([
             'message' => 'Estado actualizado correctamente.',
             'record' => $this->payload($projectMonitoring),
+        ]);
+    }
+
+    public function destroy(
+        Request $request,
+        ProjectMonitoring $projectMonitoring,
+    ): JsonResponse {
+        DeletionCode::validate($request);
+
+        $projectMonitoring->loadMissing('project:id,snip,name,place');
+        $availableProject = $projectMonitoring->project === null
+            ? null
+            : [
+                'id' => $projectMonitoring->project->id,
+                'snip' => $projectMonitoring->project->snip,
+                'name' => $projectMonitoring->project->name,
+                'place' => $projectMonitoring->project->place,
+            ];
+
+        $projectMonitoring->delete();
+
+        return response()->json([
+            'message' => 'Registro de monitoreo eliminado correctamente.',
+            'available_project' => $availableProject,
         ]);
     }
 

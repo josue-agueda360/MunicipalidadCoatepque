@@ -89,6 +89,11 @@ Route::middleware(['auth', 'active.session', 'no.store'])->group(function (): vo
         [ProjectMonitoringController::class, 'updateStatus'],
     )->middleware('throttle:30,1')->name('project-monitoring.status');
 
+    Route::delete(
+        '/monitoreo/{projectMonitoring}',
+        [ProjectMonitoringController::class, 'destroy'],
+    )->middleware('throttle:10,1')->name('project-monitoring.destroy');
+
     Route::get(
         '/control-financiero',
         [ProjectFinanceController::class, 'index'],
